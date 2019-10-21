@@ -3,7 +3,8 @@ import json
 import optparse
 import requests
 
-# pulls Docker Images from unauthenticated docker registry api. 
+
+# pulls Docker Images from unauthenticated/weak-auth docker registry api. 
 # and checks for docker misconfigurations. 
 
 apiversion = "v2"
@@ -15,18 +16,21 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 parser = optparse.OptionParser()
-parser.add_option('-u', '--url', action="store", dest="url", help="URL Endpoint for Docker Registry API v2. Eg https://IP:Port", default="spam")
+parser.add_option('-u', '--url',action="store", dest="url",help="URL Endpoint for Docker Registry API v2. Eg https://IP:Port", default="spam")
+#parser.add_option('--headers',action="store", dest = "headers", help ="add custom headers like Auth: xzf3fwvsdfds", default="spam")
 options, args = parser.parse_args()
 url = options.url
+#header = options.headers
 
-
+#hardcoded admin:admin for now, add your custom auth header accordingly
+headers = {'Authorization': 'Basic YWRtaW46YWRtaW4='}
 
 def list_repos():
-	req = requests.get(url+ "/" + apiversion + "/_catalog", verify=False)
+	req = requests.get(url+ "/" + apiversion + "/_catalog", headers=headers,verify=False)
 	return json.loads(req.text)["repositories"]
 
 def find_tags(reponame):
-	req = requests.get(url+ "/" + apiversion + "/" + reponame+"/tags/list", verify=False)
+	req = requests.get(url+ "/" + apiversion + "/" + reponame+"/tags/list", headers=headers,verify=False)
 	print "\n"
 	data =  json.loads(req.content)
 	if "tags" in data:
@@ -34,7 +38,7 @@ def find_tags(reponame):
 
 
 def list_blobs(reponame,tag):
-	req = requests.get(url+ "/" + apiversion + "/" + reponame+"/manifests/" + tag, verify=False)
+	req = requests.get(url+ "/" + apiversion + "/" + reponame+"/manifests/" + tag, headers=headers,verify=False)
 	data = json.loads(req.content)
 	if "fsLayers" in data:
 		for x in data["fsLayers"]:
@@ -43,7 +47,7 @@ def list_blobs(reponame,tag):
 				final_list_of_blobs.append(curr_blob)
 
 def download_blobs(reponame, blobdigest,dirname):
-	req = requests.get(url+ "/" + apiversion + "/" + reponame +"/blobs/sha256:" + blobdigest, verify=False)
+	req = requests.get(url+ "/" + apiversion + "/" + reponame +"/blobs/sha256:" + blobdigest, headers=headers,verify=False)
 	filename = "%s.tar.gz" % blobdigest
 	with open(dirname + "/" + filename, 'wb') as test:
 		test.write(req.content)
